@@ -4,7 +4,10 @@
   "private": true,
   "dependencies": {
     "react": "^15.5.3",
-    "react-dom": "^15.5.3"
+    "react-dom": "^15.5.3",
+    "react-list": "^0.8.5",
+    "react-radio-buttons": "^1.0.10",
+    "react-tabs": "^0.8.2"
   },
   "devDependencies": {
     "react-scripts": "0.9.5"
