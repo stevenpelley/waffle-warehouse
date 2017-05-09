@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"sort"
 	"time"
@@ -99,22 +100,26 @@ func (eventSet *EventSet) isIdAlreadyAccepted(id string) bool {
 var eventSet *EventSet
 
 func putEvent(c echo.Context) error {
+	log.Println(*c.Request())
 	id := c.Param("id")
 
 	event := new(Event)
 	if err := c.Bind(event); err != nil {
+		log.Printf("Error PUT deserializing: context: %v, err: %v", c, err)
 		return c.String(
 			http.StatusInternalServerError,
 			"problem deserializing input into Event")
 	}
 
 	if id != event.Id {
+		log.Printf("Error PUT ids mismatch. obj: %v, id: %v", event, id)
 		return c.String(
 			http.StatusInternalServerError,
 			"id does not match body id")
 	}
 
 	if err := eventSet.Put(event); err != nil {
+		log.Printf("Error PUT when adding event. obj: %v", event)
 		return c.String(
 			http.StatusInternalServerError,
 			"problem putting event")
@@ -131,11 +136,6 @@ func deleteEvent(c echo.Context) error {
 	return nil
 }
 
-func getTime(c echo.Context) error {
-	return c.String(http.StatusOK, time.Now().Format(
-		"Mon Jan 2 15:04:05 -0700 MST 2006"))
-}
-
 func getWaffleEvents(c echo.Context) error {
 	return c.String(http.StatusOK, time.Now().Format(
 		"Mon Jan 2 15:04:05 -0700 MST 2006"))
@@ -145,7 +145,6 @@ func main() {
 	eventSet = NewEventSet()
 	e := echo.New()
 	e.Static("/", "app/build")
-	e.GET("/waffle/time", getTime)
 	e.GET("/waffle/allEvents", getAllEvents)
 	e.PUT("/waffle/event/:id", putEvent)
 	e.Logger.Fatal(e.Start(":1323"))

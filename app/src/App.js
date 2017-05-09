@@ -3,42 +3,54 @@ import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import { RadioGroup, RadioButton } from 'react-radio-buttons';
 import ReactList from 'react-list';
 
-class TimeButton extends Component {
-  render() {
-    return (
-      <button className="timeButton" onClick={this.props.onClick}>click</button>
-    );
-  }
-}
-
-class TimeText extends Component {
-  render() {
-    return (
-      <div className="timeText">{this.props.value}</div>
-    );
-  }
-}
-
 class WaffleSelector extends Component {
   constructor() {
     super()
     this.state = {
       whichWaffle : 1,
-      lastWaffle : 'asdf',
     };
   }
 
   setNumWaffles(arg) {
-    this.setState({whichWaffle : arg});
+    this.setState({whichWaffle : parseInt(arg)});
   }
 
   onWafflesDone() {
+    // generate UUIDs.  From stackoverflow
+    var id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+        return v.toString(16);
+    });
+    var requestId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+        return v.toString(16);
+    });
     var obj = {
-      selectedWaffles : this.state['whichWaffle'],
-      timeMs : new Date().getTime(),
+      RequestId : requestId,
+      Id : id,
+      FoodType : "waffle",
+      ActionType : "create",
+      Time : new Date().getTime() * 1000000,
+      Count : this.state['whichWaffle'],
     }
     console.log(JSON.stringify(obj))
-    this.setState({lastWaffle : obj});
+
+    // submit to server
+    fetch('http://localhost:1323/waffle/event/' + id, {
+      headers : {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      method : 'PUT',
+      body : JSON.stringify(obj)
+    }).then(function(response) {
+      if (response.ok) {
+        return
+      }
+      throw new Error('Network response not ok');
+    }).catch(function(error) {
+      console.log('problem PUTting event: ' + error.message);
+    });
   }
 
   render() {
@@ -50,9 +62,7 @@ class WaffleSelector extends Component {
         <RadioButton value="3">3</RadioButton>
         <RadioButton value="4">4</RadioButton>
       </RadioGroup>
-      <button className="makeWaffles" onClick={() => this.onWafflesDone()}>Waffles Done</button>
-      <div className="waffleValue">{this.state.whichWaffle}</div>
-      <div className="lastWaffle">lastWaffle: {JSON.stringify(this.state.lastWaffle)}</div>
+      <button className="MakeWaffles" onClick={() => this.onWafflesDone()}>Waffles Done</button>
       </div>
     )
   }
@@ -66,16 +76,17 @@ class WaffleEvents extends Component {
     };
   }
 
-  createTimeEvent() {
-    fetch('http://localhost:1323/waffle/time') 
-      .then(result => result.text())
-      .then(text => this.addEvent(text))
+  refreshEvents() {
+    fetch('http://localhost:1323/waffle/allEvents') 
+      .then(result => result.json())
+      .then(json => this.setAllEvents(json))
+      .catch(err => {
+        console.log('problem getting all events: ' + err.message);
+      });
   }
 
-  addEvent(e) {
-    var newEvents = this.state.events.slice();
-    newEvents.unshift(e)
-    this.setState({events : newEvents});
+  setAllEvents(events) {
+    this.setState({events : events});
   }
 
   renderItem(index, key) {
@@ -85,8 +96,8 @@ class WaffleEvents extends Component {
   render() {
     return (
       <div className="WaffleEvents">
-      <button className="WaffleEventButton" onClick={() => this.createTimeEvent()}>add event</button>
-      <div className="WaffleEventsScroll" style={{overflow:'auto', maxHeight: 100}}>
+      <button className="RefreshEvents" onClick={() => this.refreshEvents()}>refresh</button>
+      <div className="WaffleEventsScroll" style={{overflow:'auto', maxHeight: 200}}>
       <ReactList
         itemRenderer={(index, key) => this.renderItem(index, key)}
         length={this.state.events.length}
@@ -98,28 +109,13 @@ class WaffleEvents extends Component {
 }
 
 class WafflePanel extends Component {
-  constructor() {
-    super()
-    this.state = {
-      value : 0,
-    };
-  }
-
   render() {
     return (
       <div className="WafflePanel">
       <WaffleSelector />
       <WaffleEvents />
-      <TimeButton onClick={() => this.updateTime()} />
-      <TimeText value={this.state.value} />
       </div>
     );
-  }
-
-  updateTime() {
-    fetch('http://localhost:1323/waffle/time') 
-      .then(result => result.text())
-      .then(text => this.setState({value : text}))
   }
 }
 
